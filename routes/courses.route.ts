@@ -1,10 +1,95 @@
-import { Request, Response, Router } from "express";
+import { NextFunction, Request, Response, Router } from "express";
+import fs from "fs";
 import CONSTANTS from "@constants/";
 import puppeteer from "puppeteer";
 import { Code } from "@utils/code";
 import { query, validationResult } from "express-validator";
 
 const router = Router();
+
+type Status = "open" | "closed" | "waitlist";
+
+type Day = "Mo" | "Tu" | "We" | "Th" | "Fr";
+
+interface Capacity {
+  cap: number;
+  total: number;
+  available: number;
+  status: Status;
+  cap_type: string;
+}
+
+interface CombinedSec extends Capacity {
+  class_num: number;
+}
+
+interface Enrollment {
+  capacity: Capacity[];
+  combined_sec: CombinedSec[];
+  note: string;
+  start_date: string;
+  end_date: string;
+}
+
+interface Meeting {
+  // @TODO - Some format...
+  start: string;
+  end: string;
+}
+
+interface Location {
+  instructors: string[]; // instructor
+  campus: string; // campus
+  location: string; // class_loc
+  meeting: Record<Day, Meeting>; // meetings
+}
+
+interface Component {
+  credits: {
+    min: number; // unit_min
+    max: number; // unit_max
+  };
+  section_num: string; // section_num
+  // @TODO - enumerate consent
+  consent: string; // consent
+  class_num: number; // class_number
+  // @TODO - enumerate component
+  // @TODO - Verify that Component.type === Section.type
+  type: string; // component
+  // @TODO - Enumerate attributes
+  attributes: string[]; // class_attr
+  // @TODO - Enumerate grading
+  grading: string; // grd_basis -- GRD, PNP, NOG, SUS
+  // @TODO - Enumerate instruction modes
+  instruction_mode: string; // instructionmode
+  locations: Location[]; // locations
+  // @TODO - Enumerate status
+  status: string; // status
+
+  // Additional metadata
+  enrollment: Enrollment;
+}
+
+interface Section {
+  components: Component[]; // components
+  // @TODO - Enumerate section type
+  type: string; // comp_desc
+}
+
+interface Course {
+  description: string; // desc_long
+  // @TODO - Enumerate careers
+  career: string; // acad_career ASEU, ASEG, FLTR
+  title: string; // course_title
+  // @TODO - include comp_reqd_desc ?
+  course_num: string; // course_num
+  sections: Section[];
+
+  // Additional metadata
+  semester: string;
+  // @TODO - include prerequisites  ?
+  // prerequisites: string;  // degree: "undergraduate" | "graduate";
+}
 
 interface Query {
   term: string;
@@ -41,10 +126,14 @@ router.get(
     })
     .withMessage("School must be a valid code"),
 
+  // (req, res, next) => {
+
+  // },
+
   async (
     req: Request<any, any, any, Query>,
     res: Response<any, Locals>,
-    next
+    next: NextFunction
   ) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -70,8 +159,8 @@ router.get(
         const reJquery = url.match(/(jQuery[0-9 _]+)&/);
         if (reJquery !== null) {
           res.locals.jquery = reJquery[1];
-          next();
           await browser.close();
+          next();
         }
       }
       request.continue();
@@ -105,6 +194,8 @@ router.get(
     const textContent = await body.getProperty("textContent");
     const text = await textContent.jsonValue();
 
+    await browser.close();
+
     if (text === null) {
       res
         .status(Code.internalCrash)
@@ -121,135 +212,20 @@ router.get(
     }
     const [_, courses] = data;
     const json = JSON.parse(courses.slice(1, courses.length - 1));
+    // fs.writeFileSync(
+    //   "./reference.json",
+    //   JSON.stringify(json, null, "\t"),
+    //   "utf-8"
+    // );
+
+    // FOR DETERMINING CLASS SEATS/SPOTS
+    // https://siscs.it.tufts.edu/psc/csprd/EMPLOYEE/HRMS/s/WEBLIB_CLS_SRCH.ISCRIPT1.FieldFormula.IScript_getResultsDetails?callback=jQuery182049704776932840633_1684457900703&term=2238&class_num=80335&_=1684457977387
 
     // Check localation != TBA
-
-    console.log(JSON.stringify(json.searchResults[0], null, 4));
+    // const parsedCourses: Course[] = json.searchResults.map((course) => {
+    // });
+    // console.log(JSON.stringify(json.searchResults[0], null, 4));
     // const relevant = json.filter((course) => course.acad_career !== "ASEU");
-    // 1] {
-    //   [1]     "desc_long": "(Cross-listed w/CSHD 62 and LST 62) Intermediate-level study of child development, with emphasis on cultural perspectives integrating psychological and anthropological theory. Children's development examined across cultures and in the context of the various social institutions and settings within which they live.",
-    //   [1]     "showCourse": "Y",
-    //   [1]     "acad_career": "ASEU",
-    //   [1]     "course_title": "Childhood Across Culture",
-    //   [1]     "level1_groupid": "1423120010000000",
-    //   [1]     "hasHiddenClasses": "N",
-    //   [1]     "comp_reqd_desc": "",
-    //   [1]     "course_num": "AAST-0062",
-    //   [1]     "sections": [
-    //   [1]         {
-    //   [1]             "components": [
-    //   [1]                 {
-    //   [1]                     "unit_selected": 3,
-    //   [1]                     "enrl_cart_stat": "N",
-    //   [1]                     "section_num": "01-LEC",
-    //   [1]                     "unit_min": 3,
-    //   [1]                     "showClass": "Y",
-    //   [1]                     "campus": "Medford/Somerville",
-    //   [1]                     "class_stat": "A",
-    //   [1]                     "session_desc": "Regular",
-    //   [1]                     "consent": "N",
-    //   [1]                     "class_num": "84137",
-    //   [1]                     "assoc_flag": "A",
-    //   [1]                     "component": "Lecture",
-    //   [1]                     "class_attr": "BFA-Language/Culture|BFA-Social Science|LA-Distribution-Social Sciences|SoE-HASS|SoE-HASS-Social Sciences|World Civilization Requirement",
-    //   [1]                     "grd_basis": "GRD",
-    //   [1]                     "instructionmode": "P",
-    //   [1]                     "credit_select": "N",
-    //   [1]                     "ssr_comp": "LEC",
-    //   [1]                     "unit_max": 3,
-    //   [1]                     "grd_desc": "GRD",
-    //   [1]                     "locations": [
-    //   [1]                         {
-    //   [1]                             "myLocUniqueId": "AAST-00628413701-LECM205-170",
-    //   [1]                             "instructor": "Theo Klimstra",
-    //   [1]                             "campus": "Medford/Somerville",
-    //   [1]                             "class_loc": "Joyce Cummings Center, 170",
-    //   [1]                             "meetings": [
-    //   [1]                                 {
-    //   [1]                                     "mtg_num": "1",
-    //   [1]                                     "meet_end_min": 885,
-    //   [1]                                     "days": [
-    //   [1]                                         "Tu",
-    //   [1]                                         "Th"
-    //   [1]                                     ],
-    //   [1]                                     "meet_end": "2:45PM",
-    //   [1]                                     "meet_start_min": 810,
-    //   [1]                                     "meet_start": "1:30PM"
-    //   [1]                                 }
-    //   [1]                             ],
-    //   [1]                             "loc_id": "M205-170"
-    //   [1]                         }
-    //   [1]                     ],
-    //   [1]                     "assoc_class": "1",
-    //   [1]                     "selected": "",
-    //   [1]                     "status": "W"
-    //   [1]                 }
-    //   [1]             ],
-    //   [1]             "comp_desc": "Lecture"
-    //   [1]         }
-    //   [1]     ]
-    //   [1] }
-
-    // {
-    //   "desc_long": "This course is designed to help MD/MPH and DVM/MPH students integrate their clinical, scientific, and public health education both conceptually and in regards to future career planning and development. The course provides continuity throughout the course of medical or veterinary school, allowing each student to develop a mentoring relationship with at least two faculty members. The course is designed in part to ameliorate the potential perceptions of discontinuity created by the spreading out of an 18 month curriculum over 4 years. The course is designed to help prepare a student for the Applied Learning Experience (ALE) and to increase the likelihood that the ALE will be of sufficient scope, depth and quality to allow for a final paper suitable for publication.",
-    //   "showCourse": "Y",
-    //   "acad_career": "PHPR",
-    //   "course_title": "Integration Of Publ Hlth",
-    //   "level1_groupid": "102308CMP0000000",
-    //   "hasHiddenClasses": "N",
-    //   "comp_reqd_desc": "",
-    //   "course_num": "CMPH-0451",
-    //   "sections": [
-    //     {
-    //       "components": [
-    //         {
-    //           "unit_selected": 0,
-    //           "enrl_cart_stat": "N",
-    //           "section_num": "DVM-LEC",
-    //           "unit_min": 0,
-    //           "showClass": "Y",
-    //           "campus": "Boston",
-    //           "class_stat": "A",
-    //           "session_desc": "CMPH",
-    //           "consent": "D",
-    //           "class_num": "83363",
-    //           "assoc_flag": "A",
-    //           "component": "Lecture",
-    //           "class_attr": "DVM/MPH Required Courses",
-    //           "grd_basis": "SUS",
-    //           "instructionmode": "P",
-    //           "credit_select": "N",
-    //           "ssr_comp": "LEC",
-    //           "unit_max": 0,
-    //           "grd_desc": "SUS",
-    //           "locations": [
-    //             {
-    //               "myLocUniqueId": "CMPH-045183363DVM-LECTBA",
-    //               "instructor": "STAFF",
-    //               "campus": "Boston",
-    //               "class_loc": "TBA",
-    //               "meetings": [
-    //                 {
-    //                   "mtg_num": "1",
-    //                   "meet_end_min": 0,
-    //                   "days": [],
-    //                   "meet_end": "12:00AM",
-    //                   "meet_start_min": 0,
-    //                   "meet_start": "12:00AM"
-    //                 }
-    //               ],
-    //               "loc_id": "TBA"
-    //             }
-    //           ],
-    //           "assoc_class": "1",
-    //           "selected": "",
-    //           "status": "O"
-    //         }
-    //       ],
-    //       "comp_desc": "Lecture"
-    //     }
-    //   ]
-    // }
 
     // console.log(json.searchResults[0], json.searchResults[0].sections);
     // const json = JSON.parse()
