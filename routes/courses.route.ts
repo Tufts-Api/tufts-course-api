@@ -2,94 +2,11 @@ import { NextFunction, Request, Response, Router } from "express";
 import fs from "fs";
 import CONSTANTS from "@constants/";
 import puppeteer from "puppeteer";
-import { Code } from "@utils/code";
+import { parse_course, Code } from "@utils/";
 import { query, validationResult } from "express-validator";
+import { Course } from "@interfaces/";
 
 const router = Router();
-
-type Status = "open" | "closed" | "waitlist";
-
-type Day = "Mo" | "Tu" | "We" | "Th" | "Fr";
-
-interface Capacity {
-  cap: number;
-  total: number;
-  available: number;
-  status: Status;
-  cap_type: string;
-}
-
-interface CombinedSec extends Capacity {
-  class_num: number;
-}
-
-interface Enrollment {
-  capacity: Capacity[];
-  combined_sec: CombinedSec[];
-  note: string;
-  start_date: string;
-  end_date: string;
-}
-
-interface Meeting {
-  // @TODO - Some format...
-  start: string;
-  end: string;
-}
-
-interface Location {
-  instructors: string[]; // instructor
-  campus: string; // campus
-  location: string; // class_loc
-  meeting: Record<Day, Meeting>; // meetings
-}
-
-interface Component {
-  credits: {
-    min: number; // unit_min
-    max: number; // unit_max
-  };
-  section_num: string; // section_num
-  // @TODO - enumerate consent
-  consent: string; // consent
-  class_num: number; // class_number
-  // @TODO - enumerate component
-  // @TODO - Verify that Component.type === Section.type
-  type: string; // component
-  // @TODO - Enumerate attributes
-  attributes: string[]; // class_attr
-  // @TODO - Enumerate grading
-  grading: string; // grd_basis -- GRD, PNP, NOG, SUS
-  // @TODO - Enumerate instruction modes
-  instruction_mode: string; // instructionmode
-  locations: Location[]; // locations
-  // @TODO - Enumerate status
-  status: string; // status
-
-  // Additional metadata
-  enrollment: Enrollment;
-}
-
-interface Section {
-  components: Component[]; // components
-  // @TODO - Enumerate section type
-  type: string; // comp_desc
-}
-
-interface Course {
-  description: string; // desc_long
-  // @TODO - Enumerate careers
-  career: string; // acad_career ASEU, ASEG, FLTR
-  title: string; // course_title
-  // @TODO - include comp_reqd_desc ?
-  course_num: string; // course_num
-  sections: Section[];
-
-  // Additional metadata
-  semester: string;
-  // @TODO - include prerequisites  ?
-  // prerequisites: string;  // degree: "undergraduate" | "graduate";
-}
 
 interface Query {
   term: string;
@@ -126,9 +43,24 @@ router.get(
     })
     .withMessage("School must be a valid code"),
 
-  // (req, res, next) => {
+  async (req, res, next) => {
+    const { term } = req.query;
+    const file = fs.readFileSync("./reference.json").toString();
+    const json = JSON.parse(file);
 
-  // },
+    const courses: Course[] = [];
+    for (let i = 0; i < 10; i++) {
+      const course = await parse_course(json.searchResults[i], term);
+      courses.push(course);
+      console.log("Finished iteration " + i);
+    }
+
+    const result = { res: courses };
+    const string = JSON.stringify(result, null, 2);
+    fs.writeFileSync("./output.json", string, "utf-8");
+
+    res.end();
+  },
 
   async (
     req: Request<any, any, any, Query>,
@@ -217,9 +149,6 @@ router.get(
     //   JSON.stringify(json, null, "\t"),
     //   "utf-8"
     // );
-
-    // FOR DETERMINING CLASS SEATS/SPOTS
-    // https://siscs.it.tufts.edu/psc/csprd/EMPLOYEE/HRMS/s/WEBLIB_CLS_SRCH.ISCRIPT1.FieldFormula.IScript_getResultsDetails?callback=jQuery182049704776932840633_1684457900703&term=2238&class_num=80335&_=1684457977387
 
     // Check localation != TBA
     // const parsedCourses: Course[] = json.searchResults.map((course) => {

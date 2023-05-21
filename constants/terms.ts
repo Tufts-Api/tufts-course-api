@@ -16,3 +16,7 @@ export const TERMS = {
   "Summer 2020": "2205",
   "Spring 2020": "2202",
 };
+
+export const REV_TERMS = Object.fromEntries(
+  Object.entries(TERMS).map(([k, v]) => [v, k])
+);
