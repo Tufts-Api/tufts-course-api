@@ -1,4 +1,18 @@
-export type Status = "open" | "closed" | "waitlist";
+import CONSTANTS from "@constants/";
+
+export type Consent = (typeof CONSTANTS.consent)[number];
+
+export type Attribute = (typeof CONSTANTS.attributes)[number];
+
+export type Grading = (typeof CONSTANTS.grading)[number];
+
+export type Status = (typeof CONSTANTS.status)[number];
+
+export type Type = (typeof CONSTANTS.type)[number];
+
+export type Instruction = (typeof CONSTANTS.instruction)[number];
+
+export type Career = (typeof CONSTANTS.career)[number];
 
 export type Day = "Mo" | "Tu" | "We" | "Th" | "Fr" | "Sa" | "Su";
 
@@ -11,7 +25,7 @@ export interface Capacity {
 
 export interface CombinedSec {
   waitlist: number;
-  status: string;
+  status: Status;
   enrolled: number;
   id: string;
   class_num: string;
@@ -26,7 +40,6 @@ export interface Enrollment {
 }
 
 export interface Meeting {
-  // @TODO - Some format...
   start: string;
   end: string;
 }
@@ -44,36 +57,23 @@ export interface Component {
     max: number; // unit_max
   };
   section_num: string; // section_num
-  // @TODO - enumerate consent
-  consent: string; // consent
+  consent: Consent; // consent
   class_num: number; // class_number
-  // @TODO - enumerate component
-  // @TODO - Verify that Component.type === Section.type
-  type: string; // component
-  // @TODO - Enumerate attributes
-  attributes: string[]; // class_attr
-  // @TODO - Enumerate grading
-  grading: string; // grd_basis -- GRD, PNP, NOG, SUS
-  // @TODO - Enumerate instruction modes
-  instruction_mode: string; // instructionmode
+  attributes: Attribute[]; // class_attr
+  grading: Grading;
+  instruction_mode: Instruction;
   locations: Location[]; // locations
-  // @TODO - Enumerate status
-  status: string; // status
-
-  // Additional metadata
-  enrollment: Enrollment | null;
+  status: Status; // status
 }
 
 export interface Section {
   components: Component[]; // components
-  // @TODO - Enumerate section type
-  type: string; // comp_desc
+  type: Type; // comp_desc
 }
 
 export interface Course {
   description: string; // desc_long
-  // @TODO - Enumerate careers
-  career: string; // acad_career ASEU, ASEG, FLTR
+  career: Career; // acad_career ASEU, ASEG, FLTR
   title: string; // course_title
   // @TODO - include comp_reqd_desc ?
   course_num: string; // course_num

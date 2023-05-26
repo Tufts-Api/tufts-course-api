@@ -49,15 +49,63 @@ router.get(
     const json = JSON.parse(file);
 
     const courses: Course[] = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < json.searchResults.length; i++) {
       const course = await parse_course(json.searchResults[i], term);
       courses.push(course);
-      console.log("Finished iteration " + i);
     }
 
-    const result = { res: courses };
+    // const result = { res: courses };
+    // fs.writeFileSync("./output.json", JSON.stringify(result, null, 2), "utf-8");
+
+    let eq: boolean = true;
+    const consent = new Set<string>();
+    const attributes = new Set<string>();
+    const grading = new Set<string>();
+    const instruction_mode = new Set<string>();
+    const section_type = new Set<string>();
+    const status = new Set<string>();
+    const career = new Set<string>();
+    const subject = new Set<string>();
+
+    courses.forEach((course: any) => {
+      const { course_num } = course;
+      career.add(course.career);
+      subject.add(course_num.split("-")[0]);
+      course.sections.forEach((s: any) => {
+        section_type.add(s.type);
+        s.components.forEach((c: any) => {
+          consent.add(c.consent);
+          eq = eq && c.type === s.type;
+
+          c.attributes.forEach((a: any) => {
+            attributes.add(a);
+          });
+
+          if (c.instruction_mode === "H") {
+            console.log(course.course_num);
+          }
+          grading.add(c.grading);
+
+          instruction_mode.add(c.instruction_mode);
+
+          status.add(c.status);
+        });
+      });
+    });
+
+    const result = {
+      eq: eq,
+      subject: Array.from(subject),
+      career: Array.from(career),
+      consent: Array.from(consent),
+      attributes: Array.from(attributes),
+      grading: Array.from(grading),
+      instruction_mode: Array.from(instruction_mode),
+      section_type: Array.from(section_type),
+      status: Array.from(status),
+    };
     const string = JSON.stringify(result, null, 2);
-    fs.writeFileSync("./output.json", string, "utf-8");
+    fs.writeFileSync("./enum.json", string, "utf-8");
 
     res.end();
   },
