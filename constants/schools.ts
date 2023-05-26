@@ -15,4 +15,4 @@ export const SCHOOLS = [
   "DENT",
   "PHPD",
   "PHPO",
-];
+] as const;

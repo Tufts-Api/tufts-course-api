@@ -9,7 +9,6 @@ export const ATTRIBUTES = [
   "SoE-HASS",
   "SoE-HASS-Social Sciences",
   "World Civilization Requirement",
-  "",
   "BFA-Humanities",
   "East Asian Cult/Lang-Diasporas",
   "LA-Distribution-Humanities",

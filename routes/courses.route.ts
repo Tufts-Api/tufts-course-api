@@ -22,8 +22,16 @@ interface Locals {
   jquery: string;
 }
 
+const contains = (keywords: readonly string[]) => {
+  return (value: string) => {
+    const attrs = value.split(",");
+    return attrs.every((a) => CONSTANTS.attributes.includes(a));
+  };
+};
+
 router.get(
   "/",
+
   query("term")
     .default(
       Math.max(
@@ -34,14 +42,75 @@ router.get(
     .custom((value: string, meta) => {
       return Object.values(CONSTANTS.terms).includes(value);
     })
-    .withMessage("Terms must be a 4 digit number"),
+    .withMessage(
+      (v) =>
+        `Terms must be a 4 digit number in ${CONSTANTS.terms} but received ${v}`
+    ),
+
+  /*
+   * @TODO - Think about how to deal with schools
+   */
   query("school")
     .default("ALL")
     .isString()
-    .custom((value: string, meta) => {
-      return Object.values(CONSTANTS.schools).includes(value);
-    })
-    .withMessage("School must be a valid code"),
+    .custom(contains(CONSTANTS.schools))
+    .withMessage(
+      (v) => `School must be in ${CONSTANTS.schools} but received ${v}`
+    ),
+
+  query("attr")
+    .isString()
+    .custom(contains(CONSTANTS.attributes))
+    .withMessage(
+      (v) => `Attribute must be in ${CONSTANTS.attributes} but received ${v}`
+    ),
+
+  query("career")
+    .isString()
+    .custom(contains(CONSTANTS.career))
+    .withMessage(
+      (v) => `Career must be in ${CONSTANTS.career} but received ${v}`
+    ),
+
+  query("consent")
+    .isString()
+    .custom(contains(CONSTANTS.consent))
+    .withMessage(
+      (v) => `Consent must be in ${CONSTANTS.consent} but received ${v}`
+    ),
+
+  query("grading")
+    .isString()
+    .custom(contains(CONSTANTS.grading))
+    .withMessage(
+      (v) => `Grading must be in ${CONSTANTS.grading} but received ${v}`
+    ),
+
+  query("instruction")
+    .isString()
+    .custom(contains(CONSTANTS.instruction))
+    .withMessage(
+      (v) => `Instruction must be in ${CONSTANTS.instruction} but received ${v}`
+    ),
+
+  query("type")
+    .isString()
+    .custom(contains(CONSTANTS.type))
+    .withMessage((v) => `Type must be in ${CONSTANTS.type} but received ${v}`),
+
+  query("subjects")
+    .isString()
+    .custom(contains(CONSTANTS.subjects))
+    .withMessage(
+      (v) => `Type must be in ${CONSTANTS.subjects} but received ${v}`
+    ),
+
+  query("status")
+    .isString()
+    .custom(contains(CONSTANTS.status))
+    .withMessage(
+      (v) => `Status must be in ${CONSTANTS.status} but received ${v}`
+    ),
 
   async (req, res, next) => {
     const { term } = req.query;
