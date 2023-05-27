@@ -24,7 +24,7 @@ class Course {
     return Array.from(instructors);
   }
 
-  public attributes() {
+  public attributes(): C.Attribute[] {
     let attributes = new Set<string>();
 
     this._course.sections.forEach((s) =>
@@ -36,12 +36,11 @@ class Course {
     return Array.from(attributes);
   }
 
-  public subjects() {
+  public subject() {
     return this._course.course_num;
   }
 
-  // @TODO: print out all careers to find proper mapping
-  public careers() {
+  public career() {
     return this._course.career;
   }
 
@@ -58,8 +57,7 @@ class Course {
   }
 
   public statuses() {
-    // @TODO : Enumerate statuses
-    const statuses: string[] = [];
+    const statuses: C.Status[] = [];
 
     this._course.sections.forEach((s) => {
       s.components.forEach((c) => {
@@ -71,8 +69,7 @@ class Course {
   }
 
   public gradings() {
-    // @TODO : Enumerate grading
-    const gradings = new Set<string>();
+    const gradings = new Set<C.Grading>();
 
     this._course.sections.forEach((s) => {
       s.components.forEach((c) => {
@@ -176,3 +173,5 @@ class Course {
     };
   }
 }
+
+export default Course;

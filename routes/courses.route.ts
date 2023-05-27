@@ -22,13 +22,6 @@ interface Locals {
   jquery: string;
 }
 
-const contains = (keywords: readonly string[]) => {
-  return (value: string) => {
-    const attrs = value.split(",");
-    return attrs.every((a) => CONSTANTS.attributes.includes(a));
-  };
-};
-
 router.get(
   "/",
 
@@ -39,9 +32,7 @@ router.get(
       ).toString()
     )
     .isString()
-    .custom((value: string, meta) => {
-      return Object.values(CONSTANTS.terms).includes(value);
-    })
+    .isIn(Object.values(CONSTANTS.terms))
     .withMessage(
       (v) =>
         `Terms must be a 4 digit number in ${CONSTANTS.terms} but received ${v}`
@@ -53,64 +44,109 @@ router.get(
   query("school")
     .default("ALL")
     .isString()
-    .custom(contains(CONSTANTS.schools))
+    .isIn(CONSTANTS.schools)
     .withMessage(
       (v) => `School must be in ${CONSTANTS.schools} but received ${v}`
     ),
 
-  query("attr")
-    .isString()
-    .custom(contains(CONSTANTS.attributes))
+  query(["attr", "attr!"])
+    .optional()
+    .custom((v) => {
+      if (typeof v === "string") {
+        return CONSTANTS.attributes.includes(v);
+      } else if (Array.isArray(v)) {
+        return v.every((key) => CONSTANTS.attributes.includes(key));
+      } else {
+        return false;
+      }
+    })
     .withMessage(
       (v) => `Attribute must be in ${CONSTANTS.attributes} but received ${v}`
     ),
 
-  query("career")
+  query(["career", "career!"])
+    .optional()
     .isString()
-    .custom(contains(CONSTANTS.career))
+    .isIn(CONSTANTS.career)
     .withMessage(
       (v) => `Career must be in ${CONSTANTS.career} but received ${v}`
     ),
 
-  query("consent")
+  query(["consent", "consent!"])
+    .optional()
     .isString()
-    .custom(contains(CONSTANTS.consent))
+    .isIn(CONSTANTS.consent)
     .withMessage(
       (v) => `Consent must be in ${CONSTANTS.consent} but received ${v}`
     ),
 
-  query("grading")
+  query(["grading", "grading!"])
+    .optional()
     .isString()
-    .custom(contains(CONSTANTS.grading))
+    .isIn(CONSTANTS.grading)
     .withMessage(
       (v) => `Grading must be in ${CONSTANTS.grading} but received ${v}`
     ),
 
-  query("instruction")
+  query(["instruction", "instruction!"])
+    .optional()
     .isString()
-    .custom(contains(CONSTANTS.instruction))
+    .isIn(CONSTANTS.instruction)
     .withMessage(
       (v) => `Instruction must be in ${CONSTANTS.instruction} but received ${v}`
     ),
 
-  query("type")
+  query(["type", "type!"])
+    .optional()
     .isString()
-    .custom(contains(CONSTANTS.type))
+    .isIn(CONSTANTS.type)
     .withMessage((v) => `Type must be in ${CONSTANTS.type} but received ${v}`),
 
-  query("subjects")
+  query(["subjects", "subjects!"])
+    .optional()
     .isString()
-    .custom(contains(CONSTANTS.subjects))
+    .isIn(CONSTANTS.subjects)
     .withMessage(
       (v) => `Type must be in ${CONSTANTS.subjects} but received ${v}`
     ),
 
-  query("status")
+  query(["status", "status!"])
+    .optional()
     .isString()
-    .custom(contains(CONSTANTS.status))
+    .isIn(CONSTANTS.status)
     .withMessage(
       (v) => `Status must be in ${CONSTANTS.status} but received ${v}`
     ),
+
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log(errors.mapped());
+      res.status(Code.badRequest).json(errors.mapped());
+      return;
+    }
+
+    const keys = Object.keys(req.query);
+    const queries = [
+      "career",
+      "consent",
+      "grading",
+      "instruction",
+      "type",
+      "subjects",
+    ];
+
+    for (const k of queries) {
+      if (keys.includes(k) && keys.includes(k + "!")) {
+        res
+          .status(Code.badRequest)
+          .json({ message: `Conflicting query ${k} with ${k}!` });
+        return;
+      }
+    }
+
+    next();
+  },
 
   async (req, res, next) => {
     const { term } = req.query;
@@ -184,12 +220,6 @@ router.get(
     res: Response<any, Locals>,
     next: NextFunction
   ) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      console.log(errors.mapped);
-      res.status(Code.badRequest).json(errors.mapped());
-    }
-
     const { term } = req.query;
     // @TODO - Change school
     const url = `${CONSTANTS.baseUrl}/term/${term}/career/ALL/subject/course/attr/keyword/instructor`;

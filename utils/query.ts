@@ -1,16 +1,43 @@
-import { Course } from "@interfaces/";
+import { Course } from "@utils/";
 
 abstract class Query {
   abstract match(course: Course, value: any): boolean;
 }
 
-// class Instructor extends Query {
-//   ...
+class Attribute extends Query {
+  match(course: Course, value: string) {
+    const attributes = course.attributes();
+    return attributes.includes(value);
+  }
+}
 
-//   match(course: Course, value: any) {
-//     course.instructor()
-//   }
-// }
+class Career extends Query {
+  match(course: Course, value: string) {
+    const career = course.career();
+    return career === value;
+  }
+}
+
+class Consent extends Query {
+  match(course: Course, value: string) {
+    const consent = course.consent();
+    return consent === value;
+    // check if consent has length of 1
+  }
+}
+
+class Grading extends Query {
+  match(course: Course, value: string) {
+    // const
+  }
+}
+
+class Subject extends Query {
+  match(course: Course, value: string) {
+    const subject = course.subject().split("-")[0];
+    return subject === value;
+  }
+}
 
 class Not extends Query {
   private _query: Query;
